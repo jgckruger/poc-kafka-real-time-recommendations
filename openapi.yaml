@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Real-Time Recommendation PoC API
+  version: 1.0.0
+  description: API for real-time recommendations (popularity, item similarity, user recommendations)
+servers:
+  - url: http://localhost:8000
+paths:
+  /recommendations/popularity:
+    get:
+      summary: Get global most popular content
+      responses:
+        '200':
+          description: List of most popular content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  top:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        content_id:
+                          type: string
+                        score:
+                          type: integer
+  /recommendations/content/{content_id}:
+    get:
+      summary: Get items most co-watched with a given item
+      parameters:
+        - in: path
+          name: content_id
+          required: true
+          schema:
+            type: string
+          description: Content item ID
+      responses:
+        '200':
+          description: List of similar items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content_id:
+                    type: string
+                  similar:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        content_id:
+                          type: string
+                        score:
+                          type: integer
+  /recommendations/user/{user_id}:
+    get:
+      summary: Get tailored recommendations for a user
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+          description: User ID
+      responses:
+        '200':
+          description: List of recommendations for the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  recommendations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        content_id:
+                          type: string
+                        score:
+                          type: integer

@@ -1,0 +1,15 @@
+meta {
+  name: Get items most co-watched with a given item
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/recommendations/content/:content_id
+  body: none
+  auth: none
+}
+
+params:path {
+  content_id: 
+}

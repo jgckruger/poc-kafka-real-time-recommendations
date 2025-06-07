@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Real-Time Recommendation PoC API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
