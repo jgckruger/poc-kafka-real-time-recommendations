@@ -141,6 +141,15 @@ services:
     depends_on:
       - kafka
 
+  valkey-ui:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=valkey
+    ports:
+      - "8081:8081"
+    depends_on:
+      - valkey
+
 volumes:
   valkey-data:
   valkey-replica-data:
