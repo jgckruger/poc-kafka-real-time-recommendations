@@ -39,7 +39,7 @@ async def main():
         while True:
             batch = await consumer.getmany(timeout_ms=1000)
             for tp, messages in batch.items():
-                partitions_lag = consumer.highwater(tp) - consumer.position(tp)
+                partitions_lag = consumer.highwater(tp) - await consumer.position(tp)
                 KAFKA_LAG.set(partitions_lag)
                 for msg in messages:
                     ts1 = time.time()

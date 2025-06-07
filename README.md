@@ -40,9 +40,11 @@ docker compose up -d --build
 
 ### 1.2. Create the Kafka topic:
 
-```bash
-docker compose run --rm kafka bash /kafka-init/create-topics.sh
-```
+Kafka topics are now created automatically when the stack starts. No manual step is needed.
+
+### 1.3. Kafka Web UI
+
+A web UI for Kafka is available at [http://localhost:8080](http://localhost:8080) (Kafka UI by Provectus). Use it to browse topics, messages, and consumer groups.
 
 ---
 

@@ -10,13 +10,14 @@ services:
       - "2181:2181"
 
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.5.1
     environment:
       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
       ALLOW_PLAINTEXT_LISTENER: "yes"
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_CFG_BROKER_ID: 1
     depends_on:
       - zookeeper
     ports:
@@ -26,11 +27,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - ./kafka-init:/kafka-init
+
+  kafka-init:
+    image: bitnami/kafka:3.5.1
+    command: ["bash", "/kafka-init/create-topics.sh"]
+    volumes:
+      - ./kafka-init:/kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   valkey:
     image: valkey/valkey:latest
     command: >
-      valkey-server --appendonly yes --replicaof valkey-replica 6379
+      valkey-server --appendonly yes
     environment:
       - VALKEY_APPENDONLY=yes
     ports:
@@ -41,7 +53,7 @@ services:
   valkey-replica:
     image: valkey/valkey:latest
     command: >
-      valkey-server --appendonly yes
+      valkey-server --appendonly yes --replicaof valkey 6379
     environment:
       - VALKEY_APPENDONLY=yes
     volumes:
@@ -56,8 +68,10 @@ services:
       - VALKEY_PORT=6379
       - PROM_PORT=9001
     depends_on:
-      - kafka
-      - valkey
+      kafka-init:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_started
     ports:
       - "9001:9001"
     # To scale: docker compose up --scale popularity-svc=3
@@ -71,8 +85,10 @@ services:
       - VALKEY_PORT=6379
       - PROM_PORT=9002
     depends_on:
-      - kafka
-      - valkey
+      kafka-init:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_started
     ports:
       - "9002:9002"
     # To scale: docker compose up --scale item-sim-svc=3
@@ -86,8 +102,10 @@ services:
       - VALKEY_PORT=6379
       - PROM_PORT=9003
     depends_on:
-      - kafka
-      - valkey
+      kafka-init:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_started
     ports:
       - "9003:9003"
     # To scale: docker compose up --scale user-rec-svc=3
@@ -110,6 +128,16 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - KAFKA_TOPIC=user_actions
+    depends_on:
+      - kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    ports:
+      - "8080:8080"
     depends_on:
       - kafka
 
