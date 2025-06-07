@@ -20,6 +20,24 @@ KAFKA_LAG = Gauge('user_rec_kafka_lag', 'Consumer lag')
 def json_log(msg, **kwargs):
     logger.info(json.dumps(dict(msg=msg, **kwargs)))
 
+async def get_user_recommendations(client, uid, recs_per_item=5, history_len=20):
+    # Get user's recent history
+    history = client.lrange(f"profile:{uid}", 0, history_len-1)
+    if not history:
+        return []
+    rec_scores = {}
+    seen = set(history)
+    for item in history:
+        # For each item, get top N similar items from Valkey (with scores)
+        similar = client.zrevrange(f"sim:{item}", 0, recs_per_item-1, withscores=True)
+        for sim_item, score in similar:
+            if sim_item not in seen:
+                rec_scores[sim_item] = rec_scores.get(sim_item, 0) + score
+                seen.add(sim_item)
+    # Sort by total score descending
+    recs = [item for item, _ in sorted(rec_scores.items(), key=lambda x: -x[1])]
+    return recs
+
 async def main():
     start_http_server(PROM_PORT)
     client = valkey.Valkey(host=VALKEY_HOST, port=VALKEY_PORT, socket_timeout=3)
@@ -51,10 +69,13 @@ async def main():
                         # Track last N items per user (store as a Valkey list)
                         client.lpush(f"profile:{uid}", content_id)
                         client.ltrim(f"profile:{uid}", 0, 19)  # keep last 20
+                        # Compute recommendations and store in Valkey
+                        recs = await get_user_recommendations(client, uid)
+                        client.set(f"userrecs:{uid}", json.dumps(recs))
                         EVENTS_PROCESSED.inc()
                         latency = time.time() - ts1
                         PROCESSING_LATENCY.observe(latency)
-                        json_log("user_profile_updated", user_id=uid, content_id=content_id, latency=latency)
+                        json_log("user_profile_updated", user_id=uid, content_id=content_id, recommendations=recs, latency=latency)
                     except Exception as e:
                         json_log("valkey_err", error=str(e))
                         await asyncio.sleep(2)
